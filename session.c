@@ -52,16 +52,6 @@ static php_ps_globals *session_globals = NULL;
 
 ps_serializer *(*suhosin_find_ps_serializer)(char *name TSRMLS_DC) = NULL;
 
-static int suhosin_get_session_var(char *name, size_t namelen, zval ***state_var TSRMLS_DC) /* {{{ */
-{
-    int ret = FAILURE;
-
-    if (SESSION_G(http_session_vars) && SESSION_G(http_session_vars)->type == IS_ARRAY) {
-        ret = zend_hash_find(Z_ARRVAL_P(SESSION_G(http_session_vars)), name, namelen + 1, (void **) state_var);
-    }
-    return ret;
-}
-
 #define PS_DELIMITER '|'
 #define PS_UNDEF_MARKER '!'
 
@@ -270,13 +260,14 @@ static void suhosin_hook_session_module(TSRMLS_D)
 static PHP_INI_MH(suhosin_OnUpdateSaveHandler)
 {
     int r;
+    ps_module *original_mod = SUHOSIN_G(s_original_mod);
 
-    if (stage == PHP_INI_STAGE_RUNTIME && SESSION_G(session_status) == php_session_none && SUHOSIN_G(s_original_mod)
-        && strcmp(new_value, "user") == 0 && strcmp(((ps_module*)SUHOSIN_G(s_original_mod))->s_name, "user") == 0) {
+    /* During runtime stage, to prevent infinite loops, only update when new value is different than original */
+    if (stage == PHP_INI_STAGE_RUNTIME && original_mod && strcasecmp(original_mod->s_name, new_value) == 0) {
         return SUCCESS;
     }
 
-    SESSION_G(mod) = SUHOSIN_G(s_original_mod);
+    SESSION_G(mod) = original_mod;
 
     r = old_OnUpdateSaveHandler(entry, new_value, new_value_length, mh_arg1, mh_arg2, mh_arg3, stage TSRMLS_CC);
     
@@ -349,7 +340,7 @@ void suhosin_hook_session(TSRMLS_D)
 
     /* increase session identifier entropy */
     if (SESSION_G(entropy_length) == 0 || SESSION_G(entropy_file) == NULL) {
-        
+#ifndef PHP_WIN32
         /* ensure that /dev/urandom exists */
         int fd = VCWD_OPEN("/dev/urandom", O_RDONLY);
         if (fd >= 0) {
@@ -357,6 +348,7 @@ void suhosin_hook_session(TSRMLS_D)
             SESSION_G(entropy_length) = 16;
             SESSION_G(entropy_file) = pestrdup("/dev/urandom", 1);
         }
+#endif
     }
 }
 

@@ -375,9 +375,9 @@ static int suhosin_detect_codetype(zend_op_array *op_array TSRMLS_DC)
 	return SUHOSIN_CODE_TYPE_UNKNOWN;
 }
 
-/* {{{ void suhosin_execute_ex(zend_op_array *op_array TSRMLS_DC)
+/* {{{ void suhosin_execute_ex
  *    This function provides a hook for execution */
-#if PHP_VERSION_ID > 50500
+#if PHP_VERSION_ID >= 50500
 static void suhosin_execute_ex(zend_execute_data *execute_data TSRMLS_DC)
 {
 	zend_op_array *op_array = execute_data->op_array;
@@ -674,7 +674,7 @@ int ih_preg_replace(IH_HANDLER_PARAMS)
 	     **limit, **zcount;
 
 	 if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ZZZ|ZZ", &regex, &replace, &subject, &limit, &zcount) == FAILURE) {
-	 	return(0);
+		return (1);
 	 }
 		
 	if (Z_TYPE_PP(regex) == IS_ARRAY) {
@@ -1085,21 +1085,26 @@ int ih_fixusername(IH_HANDLER_PARAMS)
 
 static int ih_function_exists(IH_HANDLER_PARAMS)
 {
-	zval **function_name;
+	char *name;
+	int name_len;
 	zend_function *func;
 	char *lcname;
 	zend_bool retval;
-	int func_name_len;
 	
-	if (ZEND_NUM_ARGS()!=1 || zend_get_parameters_ex(1, &function_name)==FAILURE) {
-		ZEND_WRONG_PARAM_COUNT_WITH_RETVAL(1);
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &name, &name_len) == FAILURE) {
+		return (1);
 	}
-	convert_to_string_ex(function_name);
-	func_name_len = Z_STRLEN_PP(function_name);
-	lcname = estrndup(Z_STRVAL_PP(function_name), func_name_len);	
-	zend_str_tolower(lcname, func_name_len);
 
-	retval = (zend_hash_find(EG(function_table), lcname, func_name_len+1, (void **)&func) == SUCCESS);
+	lcname = zend_str_tolower_dup(name, name_len);
+
+	/* Ignore leading "\" */
+	name = lcname;
+	if (name_len > 0 && lcname[0] == '\\') {
+		name = &lcname[1];
+		name_len--;
+	}
+
+	retval = (zend_hash_find(EG(function_table), name, name_len+1, (void **)&func) == SUCCESS);
 	
 	/*
 	 * A bit of a hack, but not a bad one: we see if the handler of the function
@@ -1113,22 +1118,22 @@ static int ih_function_exists(IH_HANDLER_PARAMS)
 	/* Now check if function is forbidden by Suhosin */
 	if (SUHOSIN_G(in_code_type) == SUHOSIN_EVAL) {
 		if (SUHOSIN_G(eval_whitelist) != NULL) {
-			if (!zend_hash_exists(SUHOSIN_G(eval_whitelist), lcname, func_name_len+1)) {
+			if (!zend_hash_exists(SUHOSIN_G(eval_whitelist), name, name_len+1)) {
 			    retval = 0;
 			}
 		} else if (SUHOSIN_G(eval_blacklist) != NULL) {
-			if (zend_hash_exists(SUHOSIN_G(eval_blacklist), lcname, func_name_len+1)) {
+			if (zend_hash_exists(SUHOSIN_G(eval_blacklist), name, name_len+1)) {
 			    retval = 0;
 			}
 		}
 	}
 	
 	if (SUHOSIN_G(func_whitelist) != NULL) {
-		if (!zend_hash_exists(SUHOSIN_G(func_whitelist), lcname, func_name_len+1)) {
+		if (!zend_hash_exists(SUHOSIN_G(func_whitelist), name, name_len+1)) {
 		    retval = 0;
 		}
 	} else if (SUHOSIN_G(func_blacklist) != NULL) {
-		if (zend_hash_exists(SUHOSIN_G(func_blacklist), lcname, func_name_len+1)) {
+		if (zend_hash_exists(SUHOSIN_G(func_blacklist), name, name_len+1)) {
 		    retval = 0;
 		}
 	}
@@ -1209,7 +1214,7 @@ static int ih_function_exists(IH_HANDLER_PARAMS)
 #define loBits(u)     ((u) & 0x7FFFFFFFU)  /* mask     the highest   bit of u */
 #define mixBits(u, v) (hiBit(u)|loBits(v)) /* move hi bit of u to hi bit of v */
 
-#define twist(m,u,v)  (m ^ (mixBits(u,v)>>1) ^ ((php_uint32)(-(php_int32)(loBit(u))) & 0x9908b0dfU))
+#define twist(m,u,v)  (m ^ (mixBits(u,v)>>1) ^ ((php_uint32)(-(php_int32)(loBit(v))) & 0x9908b0dfU))
 
 /* {{{ php_mt_initialize
  */
@@ -1320,10 +1325,11 @@ static void suhosin_gen_entropy(php_uint32 *entropybuf TSRMLS_DC)
     suhosin_SHA256_CTX   context;
     int fd;
     
+#if SIZEOF_LONG==8
     code_value ^= code_value >> 32;
     stack_value ^= stack_value >> 32;
     heap_value ^= heap_value >> 32;
-    
+#endif
     seedbuf[0] = code_value;
     seedbuf[1] = stack_value;
     seedbuf[2] = heap_value;
@@ -1519,8 +1525,9 @@ static int ih_rand(IH_HANDLER_PARAMS)
 static int ih_getrandmax(IH_HANDLER_PARAMS)
 {
 	if (zend_parse_parameters_none() == FAILURE) {
-		return(0);
+		return (1);
 	}
+
 	RETVAL_LONG(PHP_MT_RAND_MAX);
 	return (1);
 }
@@ -1638,30 +1645,14 @@ internal_function_handler ihandlers[] = {
 
 static void suhosin_execute_internal(zend_execute_data *execute_data_ptr, zend_fcall_info *fci, int return_value_used TSRMLS_DC)
 {
-	zval *return_value;
 	zval **return_value_ptr;
 	zval *this_ptr;
-	int ht;
-	
-	if (fci) {
-		return_value = *fci->retval_ptr_ptr;
-		return_value_ptr = fci->retval_ptr_ptr;
-		this_ptr = fci->object_ptr;
-		ht = fci->param_count;
-	} else {
-		temp_variable *ret = &EX_T(execute_data_ptr->opline->result.var);
-		zend_function *fbc = execute_data_ptr->function_state.function;
-		return_value = ret->var.ptr;
-		return_value_ptr = (fbc->common.fn_flags & ZEND_ACC_RETURN_REFERENCE) ? &ret->var.ptr : NULL;
-		this_ptr = execute_data_ptr->object;
-		ht = execute_data_ptr->opline->extended_value;
-	}	
 #else
 static void suhosin_execute_internal(zend_execute_data *execute_data_ptr, int return_value_used TSRMLS_DC)
 {
-	zval *return_value;
-	int ht = execute_data_ptr->opline->extended_value;
 #endif
+	zval *return_value;
+	int ht;
 	char *lcname;
 	int function_name_strlen, free_lcname = 0;
 	zend_class_entry *ce = NULL;
@@ -1683,10 +1674,6 @@ static void suhosin_execute_internal(zend_execute_data *execute_data_ptr, int re
 		lcname[function_name_strlen] = 0;
 		zend_str_tolower(lcname, function_name_strlen);
 	}
-
-#if PHP_VERSION_ID < 50500	
-	return_value = (*(temp_variable *)((char *) execute_data_ptr->Ts + execute_data_ptr->opline->result.var)).var.ptr;
-#endif
 
 	SDEBUG("function: %s", lcname);
 
@@ -1738,6 +1725,25 @@ static void suhosin_execute_internal(zend_execute_data *execute_data_ptr, int re
 		int retval = 0;
 		void *handler = ((zend_internal_function *) execute_data_ptr->function_state.function)->handler;
 		
+#if PHP_VERSION_ID < 50500
+		return_value = (*(temp_variable *)((char *) execute_data_ptr->Ts + execute_data_ptr->opline->result.var)).var.ptr;
+		ht = execute_data_ptr->opline->extended_value;
+#else
+		if (fci) {
+			return_value = *fci->retval_ptr_ptr;
+			return_value_ptr = fci->retval_ptr_ptr;
+			this_ptr = fci->object_ptr;
+			ht = fci->param_count;
+		} else {
+			temp_variable *ret = &EX_T(execute_data_ptr->opline->result.var);
+			zend_function *fbc = execute_data_ptr->function_state.function;
+			return_value = ret->var.ptr;
+			return_value_ptr = (fbc->common.fn_flags & ZEND_ACC_RETURN_REFERENCE) ? &ret->var.ptr : NULL;
+			this_ptr = execute_data_ptr->object;
+			ht = execute_data_ptr->opline->extended_value;
+		}
+#endif
+
 		if (handler != ZEND_FN(display_disabled_function)) {
 		    retval = ih->handler(IH_HANDLER_PARAM_PASSTHRU);
 		}
@@ -1770,6 +1776,7 @@ execute_internal_bailout:
 /* }}} */
 
 
+#if PHP_VERSION_ID < 50500
 /* {{{ int function_lookup(zend_extension *extension)
  */
 static int function_lookup(zend_extension *extension)
@@ -1787,6 +1794,7 @@ static int function_lookup(zend_extension *extension)
 	return 0;
 }
 /* }}} */
+#endif
 
 
 /* {{{ void suhosin_hook_execute()
@@ -1801,12 +1809,10 @@ void suhosin_hook_execute(TSRMLS_D)
 #else	
 	old_execute = zend_execute;
 	zend_execute = suhosin_execute;
-#endif
 	
 /*	old_compile_file = zend_compile_file;
 	zend_compile_file = suhosin_compile_file; */
 
-#if ZO_COMPATIBILITY_HACK_TEMPORARY_DISABLED
 	if (zo_set_oe_ex == NULL) {	
 		zo_set_oe_ex = (void *)DL_FETCH_SYMBOL(NULL, "zend_optimizer_set_oe_ex");
 	}
@@ -1847,15 +1853,13 @@ void suhosin_hook_execute(TSRMLS_D)
  */
 void suhosin_unhook_execute()
 {
-#if ZO_COMPATIBILITY_HACK_TEMPORARY_DISABLED
+#if PHP_VERSION_ID >= 50500
+	zend_execute_ex = old_execute_ex;
+#else
 	if (zo_set_oe_ex) {
 		zo_set_oe_ex(old_execute_ZO);
 	}
-#endif
 
-#if PHP_VERSION_ID >= 50500	
-	zend_execute_ex = old_execute_ex;
-#else
 	zend_execute = old_execute;
 #endif
 		
