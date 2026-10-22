@@ -386,6 +386,14 @@ static int find_boundary(multipart_buffer *self, char *boundary TSRMLS_DC)
 	return 0;
 }
 
+static zend_bool php_mime_should_save_hdr(const char *name)
+{
+	return !strcasecmp(name, "Content-Disposition")
+		|| !strcasecmp(name, "Content-Type");
+}
+
+static char *php_mime_get_hdr_value(zend_llist header, char *key);
+
 /* parse headers */
 static int multipart_buffer_headers(multipart_buffer *self, zend_llist *header TSRMLS_DC)
 {
@@ -431,10 +439,15 @@ static int multipart_buffer_headers(multipart_buffer *self, zend_llist *header T
 			}
 
 			*value = '\0';
-			do { value++; } while(isspace(*value));
-
-			key = estrdup(line);
-			smart_str_appends(&buf_value, value);
+			/* Keep only headers we use, and ignore duplicates */
+			if (!php_mime_should_save_hdr(line)
+					|| php_mime_get_hdr_value(*header, line)) {
+				key = NULL;
+			} else {
+				key = estrdup(line);
+				do { value++; } while(isspace(*value));
+				smart_str_appends(&buf_value, value);
+			}
 
 			newlines = 0;
 
@@ -518,11 +531,11 @@ static char *php_ap_getword(const zend_encoding *encoding, char **line, char sto
 	return res;
 }
 
-static char *substring_conf(char *start, int len, char quote)
+static char *substring_conf(char *start, size_t len, char quote)
 {
 	char *result = emalloc(len + 1);
 	char *resp = result;
-	int i;
+	size_t i;
 
 	for (i = 0; i < len && start[i] != quote; ++i) {
 		if (start[i] == '\\' && (start[i + 1] == '\\' || (quote && start[i + 1] == quote))) {
@@ -557,7 +570,7 @@ static char *php_ap_getword_conf(const zend_encoding *encoding, char *str TSRMLS
 		while (*strend && !isspace(*strend)) {
 			++strend;
 		}
-		return substring_conf(str, strend - str, 0);
+		return substring_conf(str, (size_t)(strend - str), 0);
 	}
 }
 
@@ -610,9 +623,9 @@ static void *php_ap_memstr(char *haystack, int haystacklen, char *needle, int ne
 }
 
 /* read until a boundary condition */
-static int multipart_buffer_read(multipart_buffer *self, char *buf, int bytes, int *end TSRMLS_DC)
+static unsigned int multipart_buffer_read(multipart_buffer *self, char *buf, unsigned int bytes, int *end TSRMLS_DC)
 {
-	int len, max;
+	unsigned int len, max;
 	char *bound;
 
 	/* fill buffer if needed */
@@ -659,7 +672,7 @@ static int multipart_buffer_read(multipart_buffer *self, char *buf, int bytes, i
 static char *multipart_buffer_read_body(multipart_buffer *self, unsigned int *len TSRMLS_DC)
 {
 	char buf[FILLUNIT], *out=NULL;
-	int total_bytes=0, read_bytes=0;
+	unsigned int total_bytes=0, read_bytes=0;
 
 	while((read_bytes = multipart_buffer_read(self, buf, sizeof(buf), NULL TSRMLS_CC))) {
 		out = erealloc(out, total_bytes + read_bytes + 1);
@@ -685,7 +698,8 @@ SAPI_POST_HANDLER_FUNC(suhosin_rfc1867_post_handler) /* {{{ */
 {
 	char *boundary, *s = NULL, *boundary_end = NULL, *start_arr = NULL, *array_index = NULL;
 	char *temp_filename = NULL, *lbuf = NULL, *abuf = NULL;
-	int boundary_len = 0, cancel_upload = 0, is_arr_upload = 0, array_len = 0;
+	int boundary_len = 0, cancel_upload = 0, is_arr_upload = 0;
+	unsigned int array_len = 0;
 	int64_t total_bytes = 0, max_file_size = 0;
 	int skip_upload = 0, anonindex = 0, is_anonymous;
 	zval *http_post_files = NULL;
@@ -754,6 +768,13 @@ SAPI_POST_HANDLER_FUNC(suhosin_rfc1867_post_handler) /* {{{ */
 	if (boundary_end) {
 		boundary_end[0] = '\0';
 		boundary_len = boundary_end-boundary;
+	}
+
+	/* Boundaries larger than FILLUNIT-strlen("\r\n--") characters lead to
+	 * erroneous parsing */
+	if (boundary_len > FILLUNIT-strlen("\r\n--")) {
+		sapi_module.sapi_error(E_WARNING, "Boundary too large in multipart/form-data POST data");
+		return;
 	}
 
 	/* Initialize the buffer */
@@ -932,7 +953,10 @@ SAPI_POST_HANDLER_FUNC(suhosin_rfc1867_post_handler) /* {{{ */
 				skip_upload = 1;
 			} else if (upload_cnt <= 0) {
 				skip_upload = 1;
-				sapi_module.sapi_error(E_WARNING, "Maximum number of allowable file uploads has been exceeded");
+				if (upload_cnt == 0) {
+					--upload_cnt;
+					sapi_module.sapi_error(E_WARNING, "Maximum number of allowable file uploads has been exceeded");
+				}
 			}
 
 			/* Return with an error if the posted data is garbled */
