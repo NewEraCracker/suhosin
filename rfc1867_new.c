@@ -522,6 +522,9 @@ static int multipart_buffer_headers(multipart_buffer *self, zend_llist *header T
 			if (newlines > SUHOSIN_G(upload_max_newlines)) {
 				SUHOSIN_G(abort_request) = 1;
 				suhosin_log(S_FILES, "configured maximum number of newlines in RFC1867 MIME headers limit exceeded - dropping rest of upload");
+				if (key) {
+					efree(key);
+				}
 				smart_str_free(&buf_value);
 				return 0;
 			}
