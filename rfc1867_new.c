@@ -62,23 +62,6 @@ static php_rfc1867_getword_t php_rfc1867_getword = php_ap_getword;
 static php_rfc1867_getword_conf_t php_rfc1867_getword_conf = php_ap_getword_conf;
 static php_rfc1867_basename_t php_rfc1867_basename = NULL;
 
-/*
- * NOTE: The following portion of the patch for CVE-2026-109618/109619 has been disabled.
- *
- * The patch mitigates a vulnerability by redirecting php_rfc1867_callback to a null pointer, effectively
- * silencing the multipart parser. However, this conflicts with Suhosin, which requires its own
- * implementation (suhosin_rfc1867_filter) to maintain security filtering.
- *
- * Adapting and enabling this would overwrite Suhosin's callback with NULL, breaking core filtering
- * functionality.
- *
- * --- Original Description ---
- * CVE-2026-109618/109619: the carried parser never invokes any multipart callback. php_rfc1867_callback
- * is redirected to a file-local pointer that is always NULL, so the compiler drops all call sites. */
-// #undef php_rfc1867_callback
-// static int (*_hp_dead_cb)(unsigned int, void *, void ** TSRMLS_DC) = NULL;
-// #define php_rfc1867_callback _hp_dead_cb
-
 /* hp_uploadprogress_guard v3: this parser never exhausts memory_limit, so the pre-RINIT out-of-memory
  * bailout that CVE-2026-109618 is built on cannot be reached through multipart input. zend_memory_usage(1)
  * is the figure the allocator compares with the limit. HP_MEM_SLACK covers the chunk the next small
@@ -88,7 +71,6 @@ static php_rfc1867_basename_t php_rfc1867_basename = NULL;
 #define HP_MEM_CHUNK ((size_t) 2 * 1024 * 1024)
 #define HP_MEM_SLACK ((size_t) 4 * 1024 * 1024)
 #define HP_MAX_HDR_VALUE ((size_t) 64 * 1024)
-static int hp_stopped = 0;
 
 static int hp_mem_room(size_t need TSRMLS_DC)
 {
@@ -506,7 +488,7 @@ static int multipart_buffer_headers(multipart_buffer *self, zend_llist *header T
 				do { value++; } while(isspace((unsigned char)*value));
 				smart_str_appends(&buf_value, value);
 				if (buf_value.len > HP_MAX_HDR_VALUE) {
-					hp_stopped = 1;
+					SUHOSIN_G(hp_stopped) = 1;
 					if (key) {
 						efree(key);
 					}
@@ -530,7 +512,7 @@ static int multipart_buffer_headers(multipart_buffer *self, zend_llist *header T
 			}
 			smart_str_appends(&buf_value, line);
 			if (buf_value.len > HP_MAX_HDR_VALUE) {
-				hp_stopped = 1;
+				SUHOSIN_G(hp_stopped) = 1;
 				if (key) {
 					efree(key);
 				}
@@ -752,7 +734,7 @@ static char *multipart_buffer_read_body(multipart_buffer *self, unsigned int *le
 
 	while((read_bytes = multipart_buffer_read(self, buf, sizeof(buf), NULL TSRMLS_CC))) {
 		if (!hp_mem_room(2 * (total_bytes + read_bytes + 1) TSRMLS_CC)) {
-			hp_stopped = 1;
+			SUHOSIN_G(hp_stopped) = 1;
 			break;
 		}
 		out = erealloc(out, total_bytes + read_bytes + 1);
@@ -807,7 +789,7 @@ SAPI_POST_HANDLER_FUNC(suhosin_rfc1867_post_handler) /* {{{ */
 		_basename = php_ap_basename;
 	}
 
-	hp_stopped = 0;
+	SUHOSIN_G(hp_stopped) = 0;
 	if (SG(post_max_size) > 0 && SG(request_info).content_length > SG(post_max_size)) {
 		sapi_module.sapi_error(E_WARNING, "POST Content-Length of %ld bytes exceeds the limit of %ld bytes", SG(request_info).content_length, SG(post_max_size));
 		return;
@@ -896,8 +878,8 @@ SAPI_POST_HANDLER_FUNC(suhosin_rfc1867_post_handler) /* {{{ */
 
 		zend_llist_clean(&header);
 
-		if (hp_stopped || !hp_mem_room(0 TSRMLS_CC)) {
-			hp_stopped = 1;
+		if (SUHOSIN_G(hp_stopped) || !hp_mem_room(0 TSRMLS_CC)) {
+			SUHOSIN_G(hp_stopped) = 1;
 			goto fileupload_done;
 		}
 
@@ -1425,7 +1407,7 @@ fileupload_done:
 	if (mbuff->buffer) efree(mbuff->buffer);
 	if (mbuff) efree(mbuff);
 
-	if (hp_stopped) {
+	if (SUHOSIN_G(hp_stopped)) {
 		hp_drop_request(array_ptr TSRMLS_CC);
 	}
 }
