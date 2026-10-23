@@ -1325,7 +1325,9 @@ static void suhosin_gen_entropy(php_uint32 *entropybuf TSRMLS_DC)
     unsigned long stack_value = (unsigned long)&code_value;
     unsigned long heap_value  = (unsigned long)SUHOSIN_G(r_state);
     suhosin_SHA256_CTX   context;
+#ifndef PHP_WIN32
     int fd;
+#endif
 
 #if SIZEOF_LONG==8
     code_value ^= code_value >> 32;

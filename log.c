@@ -93,7 +93,7 @@ static char *month_names[] = {
 
 PHP_SUHOSIN_API void suhosin_log(int loglevel, char *fmt, ...)
 {
-	int s, r, i=0, fd;
+	int i=0, fd;
 	long written, towrite;
 	int getcaller=0;
 	char *wbuf;
@@ -101,6 +101,7 @@ PHP_SUHOSIN_API void suhosin_log(int loglevel, char *fmt, ...)
 	time_t now;
 	struct tm tm;
 #if defined(AF_UNIX)
+	int s, r;
 	struct sockaddr_un saun;
 #endif
 #ifdef PHP_WIN32

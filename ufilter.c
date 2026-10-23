@@ -251,7 +251,9 @@ int suhosin_rfc1867_filter(unsigned int event, void *event_data, void **extra TS
 				multipart_event_file_data *mefd = (multipart_event_file_data *) event_data;
 
 				char *cp, *cpend;
+#ifdef SUHOSIN_EXPERIMENTAL
 				int n;
+#endif
 				cpend = mefd->data + mefd->length;
 				for (cp = mefd->data; cp < cpend; cp++) {
 					if (*cp >= 32 || isspace(*cp)) {
@@ -278,7 +280,9 @@ int suhosin_rfc1867_filter(unsigned int event, void *event_data, void **extra TS
 
 				multipart_event_file_data *mefd = (multipart_event_file_data *) event_data;
 				size_t i, j;
+#ifdef SUHOSIN_EXPERIMENTAL
 				int n;
+#endif
 
 				for (i=0, j=0; i<mefd->length; i++) {
 					if (mefd->data[i] >= 32 || isspace(mefd->data[i])) {

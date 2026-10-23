@@ -294,9 +294,6 @@ void suhosin_hook_session(TSRMLS_D)
 	ps_serializer *serializer;
 	zend_ini_entry *ini_entry;
 	zend_module_entry *module;
-#ifdef ZTS
-	ts_rsrc_id *ps_globals_id_ptr;
-#endif
 
 	if (zend_hash_find(&module_registry, "session", sizeof("session"), (void**)&module) == FAILURE) {
 		return;
