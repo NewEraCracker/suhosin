@@ -462,7 +462,7 @@ static int multipart_buffer_headers(multipart_buffer *self, zend_llist *header T
 		}
 
 		/* space in the beginning means same header */
-		if (!isspace(line[0])) {
+		if (!isspace((unsigned char)line[0])) {
 			value = strchr(line, ':');
 		}
 
@@ -609,7 +609,7 @@ static char *substring_conf(char *start, size_t len, char quote)
 
 static char *php_ap_getword_conf(const zend_encoding *encoding, char *str TSRMLS_DC)
 {
-	while (*str && isspace(*str)) {
+	while (*str && isspace((unsigned char)*str)) {
 		++str;
 	}
 
@@ -625,7 +625,7 @@ static char *php_ap_getword_conf(const zend_encoding *encoding, char *str TSRMLS
 	} else {
 		char *strend = str;
 
-		while (*strend && !isspace(*strend)) {
+		while (*strend && !isspace((unsigned char)*strend)) {
 			++strend;
 		}
 		return substring_conf(str, (size_t)(strend - str), 0);
@@ -891,7 +891,7 @@ SAPI_POST_HANDLER_FUNC(suhosin_rfc1867_post_handler) /* {{{ */
 			char *pair = NULL;
 			int end = 0;
 
-			while (isspace(*cd)) {
+			while (isspace((unsigned char)*cd)) {
 				++cd;
 			}
 
@@ -899,7 +899,7 @@ SAPI_POST_HANDLER_FUNC(suhosin_rfc1867_post_handler) /* {{{ */
 			{
 				char *key = NULL, *word = pair;
 
-				while (isspace(*cd)) {
+				while (isspace((unsigned char)*cd)) {
 					++cd;
 				}
 
@@ -945,6 +945,15 @@ SAPI_POST_HANDLER_FUNC(suhosin_rfc1867_post_handler) /* {{{ */
 				unsigned int value_len;
 				char *value = multipart_buffer_read_body(mbuff, &value_len TSRMLS_CC);
 				unsigned int new_val_len; /* Dummy variable */
+
+				/* A stopped read returns a partial value. Never process that value. */
+				if (SUHOSIN_G(hp_stopped)) {
+					if (value) {
+						efree(value);
+					}
+					efree(param);
+					goto fileupload_done;
+				}
 
 				if (!value) {
 					value = estrdup("");
