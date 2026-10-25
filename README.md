@@ -14,11 +14,17 @@ The source currently identifies itself as **Suhosin 0.9.39dev2** in [php_suhosin
 
 The repository's [Travis configuration](.travis.yml) lists PHP **5.4, 5.5, and 5.6** on Linux. This records the configured test targets, not a claim that current builds or tests have passed. The [changelog](Changelog) records removal of support for PHP versions earlier than 5.4.
 
-The following statements are retained from the original README and require maintainer confirmation for this revision:
+## Requirements
+Suhosin works on Linux, Windows, or any other platform where PHP is supported.
 
-- **PHP versions:** the original requirement was "PHP 5.4 or a newer version." For PHP 5.5, it specified **5.5.4 or higher**. The repository's listed test targets do not establish support for PHP 7 or later; the historical "newer version" wording should not be interpreted as an unrestricted compatibility guarantee.
-- **Platforms:** the original README stated that Suhosin works on Linux, Windows, or any other platform supported by PHP. Both Unix and Windows build configuration files are present, but a current platform support matrix has not been verified.
-- **Binary compatibility:** the original README stated that the extension is binary-compatible with normal PHP installations and third-party binary extensions such as ZendOptimizer. That historical compatibility claim has not been verified for this revision or for particular third-party extension versions.
+- **PHP**: PHP 5.4 or newer is required.
+  - For PHP 5.5 specifically, Suhosin requires PHP 5.5.4 or higher.
+
+- **PHP 7 or later is not supported.** The historical wording "newer version" does not imply unrestricted compatibility with any future PHP versions.
+
+- **Platforms**: The original README stated that Suhosin works on Linux, Windows, or any other platform supported by PHP. Both Unix and Windows build configuration files are present, but a current platform support matrix has not been verified.
+
+- **Binary Compatibility**: The original README claimed that the extension is binary-compatible with normal PHP installations and third-party binary extensions (e.g., ZendOptimizer). This historical compatibility claim has not been verified for this revision or for specific third-party extension versions.
 
 ## Building and installing on Linux
 
