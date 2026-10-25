@@ -16,7 +16,7 @@ The repository's [Travis configuration](.travis.yml) lists PHP **5.4, 5.5, and 5
 
 The following statements are retained from the original README and require maintainer confirmation for this revision:
 
-- **PHP versions:** the original requirement was “PHP 5.4 or a newer version.” For PHP 5.5, it specified **5.5.4 or higher**. The repository's listed test targets do not establish support for PHP 7 or later; the historical “newer version” wording should not be interpreted as an unrestricted compatibility guarantee.
+- **PHP versions:** the original requirement was "PHP 5.4 or a newer version." For PHP 5.5, it specified **5.5.4 or higher**. The repository's listed test targets do not establish support for PHP 7 or later; the historical "newer version" wording should not be interpreted as an unrestricted compatibility guarantee.
 - **Platforms:** the original README stated that Suhosin works on Linux, Windows, or any other platform supported by PHP. Both Unix and Windows build configuration files are present, but a current platform support matrix has not been verified.
 - **Binary compatibility:** the original README stated that the extension is binary-compatible with normal PHP installations and third-party binary extensions such as ZendOptimizer. That historical compatibility claim has not been verified for this revision or for particular third-party extension versions.
 
@@ -76,7 +76,7 @@ Use the configuration for the PHP instance serving your application. A command-l
 The original README points to the following upstream resources. They are retained for reference; their current availability and maintenance status have not been verified:
 
 - [Original Suhosin website](http://www.hardened-php.net/suhosin/)
-- [Original upstream source reference](https://github.com/stefanesser/suhosin)
+- [Original upstream source reference](https://github.com/sektioneins/suhosin)
 
 For this fork, obtain the source using the `master` instructions above.
 
@@ -86,8 +86,8 @@ Suhosin is distributed under the **PHP License, version 3.01**, included in [LIC
 
 The original README credits:
 
-- Copyright © 2006–2007 The Hardened-PHP Project
-- Copyright © 2007–2015 SektionEins GmbH
+- Copyright © 2006-2007 The Hardened-PHP Project
+- Copyright © 2007-2015 SektionEins GmbH
 - Author: Stefan Esser <sesser@sektioneins.de>
 
 See [CREDITS](CREDITS) for additional project credits. If the bundled license is missing and the online copy is unavailable, the original license notice directs requests to <license@php.net>.
