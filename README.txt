@@ -34,11 +34,8 @@ and just report the bug to this unofficial project.
 REQUIREMENTS:
 
 Suhosin works in Linux, Windows or any other platform where PHP is supported.
-* Suhosin 0.9.33   - PHP 5.1 and PHP 5.2.
-* Suhosin 0.9.36   - PHP 5.3 or a newer version.
 * Suhosin 0.9.37.1 - PHP 5.4 or a newer version.
 
-PHP 5.1 is supported by using the patch meant for PHP 5.2
 If you are using PHP 5.5, only PHP 5.5.4 or higher is supported
 
 ===============================================================================
@@ -57,7 +54,6 @@ Step 0. Unpacking and patching
 
   tar -zxvf suhosin-0.9.37.1.tar.gz
   cd suhosin-0.9.37.1
-  patch -p 1 -i ../suhosin-0.9.37.1.bugfix.diff
 
 Step 1. Compiling
 
