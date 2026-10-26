@@ -8,6 +8,16 @@ This repository is an unofficial community-maintained fork of the Suhosin PHP ex
 
 Report problems specific to this fork in the [issue tracker](https://github.com/NewEraCracker/suhosin/issues). Where practical, check whether the same problem occurs in the corresponding upstream version. If it occurs only in this fork, report it here rather than to the upstream project. Include the revision, PHP version, platform, and steps needed to reproduce the problem.
 
+## Security Advisory
+
+**CVE-2026-109618** and **CVE-2026-109619** identify two critical remote code execution vulnerabilities in **PHP**. Upload processing and session upload-progress handling are among the relevant attack paths, but they do not fully describe both vulnerabilities.
+
+**Suhosin does not mitigate these vulnerabilities**, leaving upload-progress tracking mechanisms potentially exposed to exploitation. The issue lies in the handling of `php_rfc1867_callback` in `ufilter.c`.
+
+To remediate the problem, the following companion solution is recommended:
+
+- **[php_uploadprogress_guard](https://github.com/HOSTED-POWER/php_uploadprogress_guard)** - a hardened extension that provides additional protection for upload-progress tracking and reduces exposure to related attack vectors.
+
 ## Compatibility and version
 
 The source currently identifies itself as **Suhosin 0.9.39dev2** in [php_suhosin.h](php_suhosin.h). This is a development version; obtaining `master` does not establish release readiness.
