@@ -62,7 +62,11 @@ static php_rfc1867_getword_t php_rfc1867_getword = php_ap_getword;
 static php_rfc1867_getword_conf_t php_rfc1867_getword_conf = php_ap_getword_conf;
 static php_rfc1867_basename_t php_rfc1867_basename = NULL;
 
-/* hp_uploadprogress_guard v3: this parser never exhausts memory_limit, so the pre-RINIT out-of-memory
+/*
+ * memory-headroom guard adapted from hp_uploadprogress_guard (Hosted Power)
+ * https://github.com/HOSTED-POWER/php_uploadprogress_guard
+ *
+ * hp_uploadprogress_guard v3: this parser never exhausts memory_limit, so the pre-RINIT out-of-memory
  * bailout that CVE-2026-109618 is built on cannot be reached through multipart input. zend_memory_usage(1)
  * is the figure the allocator compares with the limit. HP_MEM_SLACK covers the chunk the next small
  * allocation may need; an eighth of the limit (at least 4 MB) stays free for RINIT and the script. When a
@@ -97,7 +101,7 @@ static void hp_drop_request(zval *post_array TSRMLS_DC)
 		zend_hash_clean(Z_ARRVAL_P(PG(http_globals)[TRACK_VARS_FILES]));
 	}
 	SG(sapi_headers).http_response_code = 413;
-	snprintf(msg, sizeof(msg), "hp_uploadprogress_guard: multipart body dropped, memory headroom exhausted "
+	snprintf(msg, sizeof(msg), "suhosin: multipart body dropped, memory headroom exhausted "
 		"(memory_limit=%ld post_max_size=%ld read=%ld); request answered 413",
 		(long) PG(memory_limit), (long) SG(post_max_size), (long) SG(read_post_bytes));
 	php_log_err(msg TSRMLS_CC);
