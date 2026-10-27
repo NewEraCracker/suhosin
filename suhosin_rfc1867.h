@@ -26,10 +26,13 @@
 #include "SAPI.h"
 
 #define MULTIPART_CONTENT_TYPE "multipart/form-data"
+
+/* Disable external callback forwarding while preserving Suhosin's own
+ * multipart filters and cleanup. This is independent of PHP API availability. */
+#define SUHOSIN_FORWARD_RFC1867_CALLBACK 0
+
 #ifdef MULTIPART_EVENT_START
-/* CVE-2026-109618/109619/115560: the carried parser never invokes any multipart callback. php_rfc1867_callback
- * is redirected to a file-local pointer that is always NULL, so the compiler drops all call sites. */
-#define HAVE_RFC1867_CALLBACK		0
+#define HAVE_RFC1867_CALLBACK		1
 #else
 #define HAVE_RFC1867_CALLBACK		0
 
