@@ -12,7 +12,7 @@ Report problems specific to this fork in the [issue tracker](https://github.com/
 
 **CVE-2026-109618** and **CVE-2026-109619** identify two critical remote code execution vulnerabilities in **PHP**. Upload processing and session upload-progress handling are among the relevant attack paths, but they do not fully describe both vulnerabilities.
 
-**Suhosin does not mitigate these vulnerabilities**, leaving upload-progress tracking mechanisms potentially exposed to exploitation. The issue lies in the handling of `php_rfc1867_callback` in `ufilter.c`.
+**Suhosin does not completely mitigate these vulnerabilities**.
 
 To remediate the problem, the following companion solution is recommended:
 

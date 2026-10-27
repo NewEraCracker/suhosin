@@ -27,7 +27,9 @@
 
 #define MULTIPART_CONTENT_TYPE "multipart/form-data"
 #ifdef MULTIPART_EVENT_START
-#define HAVE_RFC1867_CALLBACK		1
+/* CVE-2026-109618/109619/115560: the carried parser never invokes any multipart callback. php_rfc1867_callback
+ * is redirected to a file-local pointer that is always NULL, so the compiler drops all call sites. */
+#define HAVE_RFC1867_CALLBACK		0
 #else
 #define HAVE_RFC1867_CALLBACK		0
 
