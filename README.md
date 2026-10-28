@@ -14,6 +14,10 @@ Report problems specific to this fork in the [issue tracker](https://github.com/
 
 **Suhosin does not completely mitigate these vulnerabilities**.
 
+To reduce the attack surface regarding `php_rfc1867_callback` in `ufilter.c`, this project has implemented the following mitigation:
+
+- The `SUHOSIN_FORWARD_RFC1867_CALLBACK` directive has been set to `0`. This disables external callback forwarding while preserving Suhosin's internal multipart filters and cleanup mechanisms.
+
 To remediate the problem, the following companion solution is recommended:
 
 - **[php_uploadprogress_guard](https://github.com/HOSTED-POWER/php_uploadprogress_guard)** - a hardened extension that provides additional protection for upload-progress tracking and reduces exposure to related attack vectors.
