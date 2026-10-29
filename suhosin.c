@@ -324,7 +324,7 @@ static ZEND_INI_MH(OnUpdateSuhosin_perdir)
 	tmp = SUHOSIN_G(perdir) = pestrdup(new_value,1);
 
 	/* trim the whitespace */
-	while (isspace(*tmp)) tmp++;
+	while (isspace((unsigned char)*tmp)) tmp++;
 
 	/* should we deactivate perdir completely? */
 	if (*tmp == 0 || *tmp == '0') {

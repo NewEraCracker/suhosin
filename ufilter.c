@@ -256,7 +256,7 @@ int suhosin_rfc1867_filter(unsigned int event, void *event_data, void **extra TS
 #endif
 				cpend = mefd->data + mefd->length;
 				for (cp = mefd->data; cp < cpend; cp++) {
-					if (*cp >= 32 || isspace(*cp)) {
+					if (*cp >= 32 || isspace((unsigned char)*cp)) {
 						continue;
 					}
 #ifdef SUHOSIN_EXPERIMENTAL
@@ -285,7 +285,7 @@ int suhosin_rfc1867_filter(unsigned int event, void *event_data, void **extra TS
 #endif
 
 				for (i=0, j=0; i<mefd->length; i++) {
-					if (mefd->data[i] >= 32 || isspace(mefd->data[i])) {
+					if (mefd->data[i] >= 32 || isspace((unsigned char)mefd->data[i])) {
 						mefd->data[j++] = mefd->data[i];
 					}
 #ifdef SUHOSIN_EXPERIMENTAL
@@ -327,7 +327,7 @@ int suhosin_rfc1867_filter(unsigned int event, void *event_data, void **extra TS
 				}
 
 				/* ignore empty scriptnames */
-				while (isspace(*sname)) ++sname;
+				while (isspace((unsigned char)*sname)) ++sname;
 				if (*sname == 0) {
 					SUHOSIN_G(num_uploads)++;
 					break;
