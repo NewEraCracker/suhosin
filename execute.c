@@ -761,7 +761,7 @@ int ih_mail(IH_HANDLER_PARAMS)
 				tmp = strchr(to, '\r');
 			if (tmp == NULL) break;
 			to = tmp + 1;
-			if (!isspace(*to)) break;
+			if (!isspace((unsigned char)*to)) break;
 		} while (1);
 		if (tmp != NULL) {
 			suhosin_log(S_MAIL, "mail() - newline in To header, possible injection, mail dropped");
@@ -778,7 +778,7 @@ int ih_mail(IH_HANDLER_PARAMS)
 				tmp = strchr(subject, '\r');
 			if (tmp == NULL) break;
 			subject = tmp + 1;
-			if (!isspace(*subject)) break;
+			if (!isspace((unsigned char)*subject)) break;
 		} while (1);
 		if (tmp != NULL) {
 			suhosin_log(S_MAIL, "mail() - newline in Subject header, possible injection, mail dropped");

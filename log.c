@@ -307,7 +307,7 @@ log_sapi:
 		struct stat st;
 
 		char *sname = SUHOSIN_G(log_scriptname);
-		while (isspace(*sname)) ++sname;
+		while (isspace((unsigned char)*sname)) ++sname;
 		if (*sname == 0) goto log_phpscript;
 
 		if (VCWD_STAT(sname, &st) < 0) {
